@@ -1,0 +1,115 @@
+// App.jsx
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
+import { BottomNav } from './components/shared/BottomNav'
+import { AuthPage } from './pages/AuthPage'
+import { WatchtowerScreen } from './components/Watchtower/WatchtowerScreen'
+import './styles/globals.css'
+
+// Placeholder screens for Phase 2+
+function MapScreen() {
+  return (
+    <div>
+      <div className="screen-header">
+        <h1 className="screen-header__title">Country Map</h1>
+        <p className="screen-header__subtitle">Tenements on your determination area</p>
+      </div>
+      <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>🗺️</div>
+        <p>MapLibre GL map — Phase 2</p>
+      </div>
+    </div>
+  )
+}
+
+function HeritageScreen() {
+  return (
+    <div>
+      <div className="screen-header">
+        <h1 className="screen-header__title">Heritage Register</h1>
+        <p className="screen-header__subtitle">Sovereign cultural register</p>
+      </div>
+      <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>⭕</div>
+        <p>Heritage register — Phase 2</p>
+      </div>
+    </div>
+  )
+}
+
+function RespondScreen() {
+  return (
+    <div>
+      <div className="screen-header">
+        <h1 className="screen-header__title">Respond</h1>
+        <p className="screen-header__subtitle">Response toolkit &amp; Form 4</p>
+      </div>
+      <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>📋</div>
+        <p>Response toolkit — Phase 3</p>
+      </div>
+    </div>
+  )
+}
+
+export default function App() {
+  const [session, setSession] = useState(undefined) // undefined = loading
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setSession(session)
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Loading state
+  if (session === undefined) {
+    return (
+      <div style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-base)',
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ marginBottom: 'var(--space-3)', fontSize: '1.5rem' }}>⬡</div>
+          Defending Country Intel
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated
+  if (!session) {
+    return <AuthPage />
+  }
+
+  // Authenticated
+  return (
+    <BrowserRouter>
+      <div id="root">
+        <main className="app-content">
+          <Routes>
+            <Route path="/" element={<Navigate to="/watchtower" replace />} />
+            <Route path="/watchtower" element={<WatchtowerScreen />} />
+            <Route path="/watchtower/:noticeId" element={<WatchtowerScreen />} />
+            <Route path="/map" element={<MapScreen />} />
+            <Route path="/heritage" element={<HeritageScreen />} />
+            <Route path="/respond" element={<RespondScreen />} />
+          </Routes>
+        </main>
+        <BottomNav />
+      </div>
+    </BrowserRouter>
+  )
+}
