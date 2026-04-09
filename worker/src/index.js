@@ -8,8 +8,7 @@
 // ============================================================
 
 import { ingestNNTT } from './ingest-nntt.js'
-import { ingestDMIRS } from './ingest-dmirs.js'
-import { ingestGazette } from './ingest-gazette.js'
+
 import { updateDeadlineStatuses, dispatchAlerts } from './deadline.js'
 
 export default {
