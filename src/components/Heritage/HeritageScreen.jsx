@@ -27,8 +27,8 @@ export function HeritageScreen() {
   const [sites, setSites] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     site_type: '',
     significance_assertion: '',
@@ -107,8 +107,12 @@ export function HeritageScreen() {
               {showForm ? 'Cancel' : '+ Add Site'}
             </button>
           </div>
+        </div>
       </div>
-      </div>
+
+      {showUpload && (
+        <HeritageUpload onComplete={() => { fetchSites(); setShowUpload(false) }} />
+      )}
 
       {showForm && (
         <div style={{ padding: 'var(--space-4)' }}>
@@ -195,11 +199,7 @@ export function HeritageScreen() {
         </div>
       )}
 
-      {showUpload && (
-        <HeritageUpload onComplete={() => { fetchSites(); setShowUpload(false) }} />
-      )}
-
-      {!loading && sites.length === 0 && !showForm && (
+      {!loading && sites.length === 0 && !showForm && !showUpload && (
         <div className="empty-state">
           <div className="empty-state__icon">⭕</div>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>No sites recorded yet</p>
