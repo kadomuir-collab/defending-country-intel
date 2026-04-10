@@ -27,7 +27,7 @@ export async function ingestNNTT(env) {
 
 async function getActivePBCs(env) {
   const response = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/pbcs?select=id,name,determination_id,boundary&active=eq.true`,
+    `${env.SUPABASE_URL}/rest/v1/pbcs?select=id,name,determination_id&active=eq.true`,
     {
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
