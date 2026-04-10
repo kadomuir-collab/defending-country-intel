@@ -7,22 +7,7 @@ import { AuthPage } from './pages/AuthPage'
 import { WatchtowerScreen } from './components/Watchtower/WatchtowerScreen'
 import './styles/globals.css'
 import { MapScreen } from './components/Map/MapScreen'
-
-
-function HeritageScreen() {
-  return (
-    <div>
-      <div className="screen-header">
-        <h1 className="screen-header__title">Heritage Register</h1>
-        <p className="screen-header__subtitle">Sovereign cultural register</p>
-      </div>
-      <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>⭕</div>
-        <p>Heritage register — Phase 2</p>
-      </div>
-    </div>
-  )
-}
+import { HeritageScreen } from './components/Heritage/HeritageScreen'
 
 function RespondScreen() {
   return (
