@@ -65,6 +65,32 @@ export default function App() {
   return (
     <BrowserRouter>
       <div id="root">
+        <header style={{
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-2)',
+  padding: '8px 16px',
+  background: 'var(--bg-surface)',
+  borderBottom: '1px solid var(--bg-border)',
+  position: 'sticky',
+  top: 0,
+  zIndex: 50
+}}>
+  <img src="/icons/nyimu-logo.png" alt="Nyimu" style={{
+    width: 94,
+    height: 94,
+    borderRadius: '50%',
+  }} />
+  <span style={{
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    color: 'var(--text-muted)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase'
+  }}>
+    Defending Country Intel
+  </span>
+</header>
         <main className="app-content">
           <Routes>
             <Route path="/" element={<Navigate to="/watchtower" replace />} />
@@ -78,9 +104,12 @@ export default function App() {
         <BottomNav />
         <div style={{
           position: 'fixed',
-          top: 12,
+          top: 8,
           right: 16,
-          zIndex: 100
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
         }}>
           <AuthMenu user={session?.user} />
         </div>
