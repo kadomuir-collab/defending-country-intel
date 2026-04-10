@@ -36,6 +36,18 @@ export function MapScreen() {
     map.current.on('load', async () => {
       await loadPBCBoundary()
       await loadNotices()
+
+      const { data: user } = await supabase.auth.getUser()
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('role')
+        .eq('user_id', user.user.id)
+        .single()
+
+      if (staffData?.role === 'superuser') {
+        await loadAllWAPBCs()
+      }
+
       setLoading(false)
     })
 
@@ -162,7 +174,7 @@ export function MapScreen() {
       const p = e.features[0].properties
       new maplibregl.Popup()
         .setLngLat(e.lngLat)
-        .setHTML(`<div style="font-family:monospace;font-size:12px"><strong>${p.tenement_type} ${p.tenement_number}</strong><br/>${p.grantee}</div>`)
+        .setHTML('<div style="font-family:monospace;font-size:12px"><strong>' + p.tenement_type + ' ' + p.tenement_number + '</strong><br/>' + p.grantee + '</div>')
         .addTo(map.current)
     })
 
@@ -174,12 +186,71 @@ export function MapScreen() {
     })
   }
 
+  async function loadAllWAPBCs() {
+    const { data: allPBCs } = await supabase
+      .from('pbcs')
+      .select('id, name, determination_id, boundary, entity_type')
+      .like('determination_id', 'WCD%')
+      .not('boundary', 'is', null)
+
+    if (!allPBCs?.length) return
+
+    const features = allPBCs
+      .filter(pbc => pbc.boundary)
+      .map(pbc => ({
+        type: 'Feature',
+        geometry: pbc.boundary,
+        properties: {
+          name: pbc.name,
+          determination_id: pbc.determination_id,
+          entity_type: pbc.entity_type
+        }
+      }))
+
+    if (!features.length) return
+
+    map.current.addSource('all-wa-pbcs', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features }
+    })
+
+    map.current.addLayer({
+      id: 'all-wa-pbcs-fill',
+      type: 'fill',
+      source: 'all-wa-pbcs',
+      paint: { 'fill-color': '#8b5cf6', 'fill-opacity': 0.05 }
+    })
+
+    map.current.addLayer({
+      id: 'all-wa-pbcs-line',
+      type: 'line',
+      source: 'all-wa-pbcs',
+      paint: { 'line-color': '#8b5cf6', 'line-width': 0.8, 'line-opacity': 0.5 }
+    })
+
+    map.current.on('click', 'all-wa-pbcs-fill', (e) => {
+      const p = e.features[0].properties
+      new maplibregl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML('<div style="font-family:monospace;font-size:12px"><strong>' + p.name + '</strong><br/>' + p.determination_id + '<br/><em>' + p.entity_type + '</em></div>')
+        .addTo(map.current)
+    })
+
+    map.current.on('mouseenter', 'all-wa-pbcs-fill', () => {
+      map.current.getCanvas().style.cursor = 'pointer'
+    })
+    map.current.on('mouseleave', 'all-wa-pbcs-fill', () => {
+      map.current.getCanvas().style.cursor = ''
+    })
+  }
+
   const legendItems = [
     { color: '#22c55e', label: 'Monitor' },
     { color: '#f59e0b', label: 'Amber' },
     { color: '#ef4444', label: 'Urgent' },
     { color: '#ff1744', label: 'Critical' },
-    { color: '#d97706', label: 'Your Country', dashed: true }
+    { color: '#d97706', label: 'Your Country', dashed: true },
+    { color: '#8b5cf6', label: 'WA PBCs', dashed: false }
   ]
 
   return (
@@ -222,7 +293,7 @@ export function MapScreen() {
             <div style={{
               width: 12, height: 12,
               background: item.dashed ? 'transparent' : item.color,
-              border: `2px ${item.dashed ? 'dashed' : 'solid'} ${item.color}`,
+              border: '2px ' + (item.dashed ? 'dashed' : 'solid') + ' ' + item.color,
               borderRadius: 2, flexShrink: 0
             }} />
             {item.label}

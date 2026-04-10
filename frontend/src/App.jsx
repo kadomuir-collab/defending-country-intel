@@ -9,6 +9,7 @@ import { WatchtowerScreen } from './components/Watchtower/WatchtowerScreen'
 import './styles/globals.css'
 import { MapScreen } from './components/Map/MapScreen'
 import { HeritageScreen } from './components/Heritage/HeritageScreen'
+import { AuthMenu } from './components/shared/AuthMenu'
 
 function RespondScreen() {
   return (
@@ -43,14 +44,14 @@ export default function App() {
   // Loading state
   if (session === undefined) {
     return (
-     <div style={{
+    <div style={{
       minHeight: '100dvh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       background: 'var(--bg-base)'
     }}>
-      <NyimuLoader message="Nyimu is waking up..." />
+      <NyimuLoader message="" />
     </div>
     )
   }
@@ -75,6 +76,14 @@ export default function App() {
           </Routes>
         </main>
         <BottomNav />
+        <div style={{
+          position: 'fixed',
+          top: 12,
+          right: 16,
+          zIndex: 100
+        }}>
+          <AuthMenu user={session?.user} />
+        </div>
       </div>
     </BrowserRouter>
   )
