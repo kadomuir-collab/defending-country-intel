@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { read, utils } from 'xlsx'
 import { supabase } from '../../lib/supabase'
 
 const SITE_TYPES = [
@@ -19,59 +20,41 @@ export function HeritageUpload({ onComplete }) {
   const [imported, setImported] = useState(0)
   const fileRef = useRef()
 
-  function downloadTemplate() {
-    const csv = [
-      '# site_type options: dreaming_site / dreaming_track / waterhole / rock_art / burial_ground / ochre_deposit / boundary_marker / underground_dreaming / ceremony_ground / other',
-      '# access_restriction options: unrestricted / gender_restricted_male / gender_restricted_female / knowledge_holder_only / admin_only',
-      '# significance_assertion: State THAT the site is significant - not WHY (Top End 2025)',
-      '# latitude/longitude: optional - leave blank if not disclosing location',
-      'site_type,significance_assertion,verified_by,access_restriction,buffer_radius_m,latitude,longitude',
-      '"dreaming_site","This site is of special significance to our people in accordance with our traditions and laws.","Elder Name","unrestricted","5000","",""'
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'heritage_register_template.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  function parseCSV(text) {
-    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'))
-    if (lines.length < 2) return { rows: [], errors: ['File appears empty.'] }
-
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase())
+  function parseRows(rawRows) {
     const parsed = []
     const errs = []
 
-    lines.slice(1).forEach((line, i) => {
-      if (!line.trim()) return
-      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''))
-      const row = {}
-      headers.forEach((h, j) => { row[h] = values[j] || '' })
+    rawRows.forEach((row, i) => {
+      // Skip comment rows and empty rows
+      const firstVal = String(row.site_type || row['site_type *'] || '').trim()
+      if (!firstVal || firstVal.startsWith('#') || firstVal === 'site_type' || firstVal === 'site_type *') return
+
+      const site_type = (row.site_type || row['site_type *'] || '').toString().trim()
+      const significance = (row.significance_assertion || row['significance_assertion *'] || '').toString().trim()
+      const verified_by = (row.verified_by || row['verified_by *'] || '').toString().trim()
+      const access = (row.access_restriction || 'unrestricted').toString().trim()
+      const buffer = parseInt(row.buffer_radius_m || 5000)
+      const lat = row.latitude ? parseFloat(row.latitude) : null
+      const lng = row.longitude ? parseFloat(row.longitude) : null
 
       const rowErrors = []
-      if (!row.site_type) rowErrors.push('site_type required')
-      else if (!SITE_TYPES.includes(row.site_type)) rowErrors.push(`Invalid site_type: ${row.site_type}`)
-      if (!row.significance_assertion) rowErrors.push('significance_assertion required')
-      if (!row.verified_by) rowErrors.push('verified_by required')
-      if (row.access_restriction && !ACCESS_LEVELS.includes(row.access_restriction)) {
-        rowErrors.push(`Invalid access_restriction: ${row.access_restriction}`)
-      }
+      if (!site_type) rowErrors.push('site_type required')
+      else if (!SITE_TYPES.includes(site_type)) rowErrors.push(`Invalid site_type: ${site_type}`)
+      if (!significance) rowErrors.push('significance_assertion required')
+      if (!verified_by) rowErrors.push('verified_by required')
+      if (access && !ACCESS_LEVELS.includes(access)) rowErrors.push(`Invalid access_restriction: ${access}`)
 
       if (rowErrors.length > 0) {
         errs.push({ row: i + 2, errors: rowErrors })
       } else {
         parsed.push({
-          site_type: row.site_type,
-          significance_assertion: row.significance_assertion,
-          verified_by: row.verified_by,
-          access_restriction: row.access_restriction || 'unrestricted',
-          buffer_radius_m: parseInt(row.buffer_radius_m) || 5000,
-          latitude: row.latitude ? parseFloat(row.latitude) : null,
-          longitude: row.longitude ? parseFloat(row.longitude) : null,
+          site_type,
+          significance_assertion: significance,
+          verified_by,
+          access_restriction: access || 'unrestricted',
+          buffer_radius_m: isNaN(buffer) ? 5000 : buffer,
+          latitude: lat,
+          longitude: lng,
         })
       }
     })
@@ -82,14 +65,19 @@ export function HeritageUpload({ onComplete }) {
   function handleFile(e) {
     const file = e.target.files[0]
     if (!file) return
+
     const reader = new FileReader()
     reader.onload = (ev) => {
-      const { rows: parsed, errors: errs } = parseCSV(ev.target.result)
+      const data = new Uint8Array(ev.target.result)
+      const wb = read(data, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rawRows = utils.sheet_to_json(ws, { defval: '' })
+      const { rows: parsed, errors: errs } = parseRows(rawRows)
       setRows(parsed)
       setErrors(errs)
       setStage('preview')
     }
-    reader.readAsText(file)
+    reader.readAsArrayBuffer(file)
   }
 
   async function handleImport() {
@@ -137,17 +125,30 @@ export function HeritageUpload({ onComplete }) {
         {stage === 'idle' && (
           <>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-              Upload a CSV spreadsheet prepared by your PBC. Download the template to see the correct format.
+              Upload an Excel (.xlsx) or CSV file prepared by your PBC. Download the template for the correct format — it includes dropdowns and instructions.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-              <button className="btn btn--secondary" onClick={downloadTemplate}>
-                Download Template
-              </button>
+              <a
+                href="/heritage_register_template.xlsx"
+                download
+                className="btn btn--secondary"
+              >
+                ↓ Download Excel Template
+              </a>
               <button className="btn btn--primary" onClick={() => fileRef.current?.click()}>
-                Upload CSV
+                ↑ Upload File
               </button>
             </div>
-            <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{ display: 'none' }} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFile}
+              style={{ display: 'none' }}
+            />
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 'var(--space-3)' }}>
+              Accepts .xlsx, .xls, or .csv files
+            </p>
           </>
         )}
 
@@ -159,13 +160,16 @@ export function HeritageUpload({ onComplete }) {
             {errors.length > 0 && (
               <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                 <div style={{ color: 'var(--risk-high)', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 8 }}>
-                  {errors.length} row{errors.length !== 1 ? 's' : ''} with errors — will be skipped:
+                  {errors.length} row{errors.length !== 1 ? 's' : ''} with errors — skipped:
                 </div>
-                {errors.map((e, i) => (
+                {errors.slice(0, 5).map((e, i) => (
                   <div key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Row {e.row}: {e.errors.join(', ')}
                   </div>
                 ))}
+                {errors.length > 5 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>...and {errors.length - 5} more</div>
+                )}
               </div>
             )}
             {rows.length > 0 && (
@@ -218,7 +222,7 @@ export function HeritageUpload({ onComplete }) {
         {stage === 'done' && (
           <div style={{ textAlign: 'center', padding: 'var(--space-4)' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xl)', color: 'var(--status-green)', marginBottom: 8 }}>
-              {imported} site{imported !== 1 ? 's' : ''} imported
+              ✓ {imported} site{imported !== 1 ? 's' : ''} imported
             </div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
               Saved to your sovereign register.
