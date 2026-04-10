@@ -1,4 +1,5 @@
 // App.jsx
+import { NyimuLoader } from './components/shared/NyimuLoader'
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -42,21 +43,15 @@ export default function App() {
   // Loading state
   if (session === undefined) {
     return (
-      <div style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg-base)',
-        fontFamily: 'var(--font-mono)',
-        color: 'var(--text-muted)',
-        fontSize: 'var(--text-sm)'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 'var(--space-3)', fontSize: '1.5rem' }}>⬡</div>
-          Defending Country Intel
-        </div>
-      </div>
+     <div style={{
+      minHeight: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-base)'
+    }}>
+      <NyimuLoader message="Nyimu is waking up..." />
+    </div>
     )
   }
 

@@ -115,10 +115,28 @@ export function WatchtowerScreen() {
 
 function LoadingSkeleton() {
   return (
-    <div className="notice-list">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="card loading-pulse" style={{ height: 120 }} />
-      ))}
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-12)'
+    }}>
+      <img
+        src="/icons/nyimu-logo.png"
+        alt="Nyimu searching..."
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: '50%',
+          animation: 'nyimuBounce 2s ease-in-out infinite'
+        }}
+      />
+      <style>{`
+        @keyframes nyimuBounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-12px) scale(1.05); }
+        }
+      `}</style>
     </div>
   )
 }

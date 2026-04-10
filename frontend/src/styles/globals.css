@@ -263,3 +263,12 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* Nyimu custom cursor */
+* {
+  cursor: url('/icons/nyimu-favicon.png') 16 16, auto;
+}
+
+button, a, select, input[type="range"] {
+  cursor: url('/icons/nyimu-favicon.png') 16 16, pointer;
+}
