@@ -6,22 +6,8 @@ import { BottomNav } from './components/shared/BottomNav'
 import { AuthPage } from './pages/AuthPage'
 import { WatchtowerScreen } from './components/Watchtower/WatchtowerScreen'
 import './styles/globals.css'
+import { MapScreen } from './components/Map/MapScreen'
 
-// Placeholder screens for Phase 2+
-function MapScreen() {
-  return (
-    <div>
-      <div className="screen-header">
-        <h1 className="screen-header__title">Country Map</h1>
-        <p className="screen-header__subtitle">Tenements on your determination area</p>
-      </div>
-      <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-3)' }}>🗺️</div>
-        <p>MapLibre GL map — Phase 2</p>
-      </div>
-    </div>
-  )
-}
 
 function HeritageScreen() {
   return (
