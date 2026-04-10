@@ -8,7 +8,7 @@
 // ============================================================
 
 import { ingestNNTT } from './ingest-nntt.js'
-
+import { ingestDMIRS } from './ingest-dmirs.js'
 import { updateDeadlineStatuses, dispatchAlerts } from './deadline.js'
 
 export default {
@@ -45,13 +45,14 @@ export default {
       console.error('[DCI] NNTT ingestion failed:', err)
     }
 
-    // 3. Ingest DMIRS (secondary source — add after NNTT stable)
-    // Phase 2+ only
-    // try {
-    //   results.dmirs = await ingestDMIRS(env)
-    // } catch (err) {
-    //   results.errors.push({ source: 'dmirs', error: err.message })
-    // }
+    // 3. Ingest DMIRS (Early Warning pipeline)
+    try {
+      results.dmirs = await ingestDMIRS(env)
+      console.log('[DCI] DMIRS ingestion complete:', results.dmirs)
+    } catch (err) {
+      results.errors.push({ source: 'dmirs', error: err.message })
+      console.error('[DCI] DMIRS ingestion failed:', err)
+    }
 
     // 4. Ingest WA Gazette (secondary source — add after NNTT stable)
     // Phase 2+ only

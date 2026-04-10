@@ -52,4 +52,86 @@ async function queryNNTTForPBC(pbc) {
     spatialRel: 'esriSpatialRelIntersects',
     outFields: 'OBJECTID,NOTICE_NO,TENEMENT_NO,TENEMENT_TYPE,GRANTEE,GOVT_PARTY,NOTIFICATION_DATE,STATUS,NOTICE_URL',
     f: 'geojson',
-    returnGeometry: '
+    returnGeometry: 'true'
+  })
+
+  const response = await fetch(`${FUTURE_ACTS_LAYER}/query?${params}`)
+  if (!response.ok) throw new Error(`NNTT API error: ${response.status}`)
+
+  const data = await response.json()
+  if (!data.features) return []
+
+  return data.features
+    .filter(f => f.properties)
+    .map(parseNNTTFeature)
+    .filter(Boolean)
+}
+async function upsertNotices(env, pbcId, notices) {
+  if (!notices.length) return 0
+
+  const records = notices.map(n => ({ ...n, pbc_id: pbcId }))
+
+  const response = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/notices`,
+    {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates'
+      },
+      body: JSON.stringify(records)
+    }
+  )
+
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`Supabase upsert failed: ${err}`)
+  }
+
+  return records.length
+}
+
+function parseNNTTFeature(feature) {
+  const props = feature.properties
+  const notificationDate = parseNNTTDate(props.NOTIFICATION_DATE)
+  if (!notificationDate) return null
+
+  return {
+    tenement_number: props.TENEMENT_NO || props.NOTICE_NO,
+    tenement_type: normaliseTenementType(props.TENEMENT_TYPE),
+    grantee: props.GRANTEE || null,
+    government_party: props.GOVT_PARTY || null,
+    source: 'nntt',
+    source_id: String(props.OBJECTID),
+    notice_url: props.NOTICE_URL || null,
+    notification_date: notificationDate,
+    geometry: feature.geometry ? JSON.stringify(feature.geometry) : null,
+    status: 'active'
+  }
+}
+
+function parseNNTTDate(dateValue) {
+  if (!dateValue) return null
+  if (typeof dateValue === 'number') {
+    return new Date(dateValue).toISOString().split('T')[0]
+  }
+  if (typeof dateValue === 'string') {
+    const d = new Date(dateValue)
+    if (!isNaN(d)) return d.toISOString().split('T')[0]
+  }
+  return null
+}
+
+function normaliseTenementType(raw) {
+  if (!raw) return 'unknown'
+  const map = {
+    'Exploration Licence': 'EL',
+    'Prospecting Licence': 'PL',
+    'Mining Lease': 'ML',
+    'Miscellaneous Licence': 'MISC',
+    'General Purpose Lease': 'GPL'
+  }
+  return map[raw] || raw
+}
