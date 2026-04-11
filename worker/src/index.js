@@ -92,9 +92,17 @@ if (authHeader !== env.ADMIN_TOKEN && authParam !== env.ADMIN_TOKEN) {
   return new Response('Unauthorized', { status: 401 })
 }
 
-    if (url.pathname === '/trigger/nntt') {
+  if (url.pathname === '/trigger/nntt') {
       const result = await ingestNNTT(env)
       return Response.json(result)
+    }
+  if (url.pathname === '/trigger/dmirs') {
+      try {
+        const result = await ingestDMIRS(env)
+        return Response.json(result)
+      } catch (err) {
+        return Response.json({ error: err.message, stack: err.stack }, { status: 500 })
+      }
     }
 
     if (url.pathname === '/trigger/deadlines') {
