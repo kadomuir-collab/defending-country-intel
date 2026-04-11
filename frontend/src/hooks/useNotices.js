@@ -33,10 +33,28 @@ export function useNotices(filter = 'active') {
   async function fetchNotices() {
     try {
       setLoading(true)
+
+      // Get user's PBC IDs and role
+      const { data: userData } = await supabase.auth.getUser()
+      const { data: staffRows } = await supabase
+        .from('staff')
+        .select('pbc_id, role')
+        .eq('user_id', userData.user.id)
+        .eq('active', true)
+
+      const isSuperuser = staffRows?.some(s => s.role === 'superuser')
+      const pbcIds = staffRows?.map(s => s.pbc_id).filter(Boolean) || []
+
       let query = supabase
         .from('notices')
         .select('*')
         .order('deadline_date', { ascending: true })
+        .limit(10000)
+
+      // Filter by user's PBCs unless superuser
+      if (!isSuperuser && pbcIds.length > 0) {
+        query = query.in('pbc_id', pbcIds)
+      }
 
       if (filter === 'active') {
         query = query.eq('status', 'active')
@@ -45,7 +63,6 @@ export function useNotices(filter = 'active') {
       }
 
       const { data, error } = await query
-
       if (error) throw error
       setNotices(data || [])
     } catch (err) {

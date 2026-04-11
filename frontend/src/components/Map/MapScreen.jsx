@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 export function MapScreen() {
   const mapContainer = useRef(null)
@@ -34,27 +34,26 @@ export function MapScreen() {
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right')
 
     map.current.on('load', async () => {
-  const { data: user } = await supabase.auth.getUser()
-  const { data: staffData } = await supabase
-    .from('staff')
-    .select('role')
-    .eq('user_id', user.user.id)
+      const { data: user } = await supabase.auth.getUser()
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('role')
+        .eq('user_id', user.user.id)
 
-  const isSuperuser = staffData?.some(s => s.role === 'superuser')
+      const isSuperuser = staffData?.some(s => s.role === 'superuser')
 
-  await loadPBCBoundaries(!isSuperuser) // only fitBounds if NOT superuser
-  await loadNotices()
+      await loadPBCBoundaries(isSuperuser)
+      await loadNotices()
 
-  if (isSuperuser) {
-    await loadAllWAPBCs()
-    // Fit to all of WA
-    map.current.fitBounds([
-      [112.9, -35.2], // SW corner WA
-      [129.0, -13.7]  // NE corner WA
-    ], { padding: 40 })
-    }
+      if (isSuperuser) {
+        await loadAllWAPBCs()
+        map.current.fitBounds([
+          [112.9, -35.2],
+          [129.0, -13.7]
+        ], { padding: 40 })
+      }
 
-    setLoading(false)
+      setLoading(false)
     })
 
     return () => {
@@ -65,8 +64,7 @@ export function MapScreen() {
     }
   }, [])
 
-  // Load ALL PBCs the current user is staff of and show all boundaries
-  async function loadPBCBoundaries() {
+  async function loadPBCBoundaries(isSuperuser) {
     const { data: user } = await supabase.auth.getUser()
     const { data: staffRows } = await supabase
       .from('staff')
@@ -76,9 +74,12 @@ export function MapScreen() {
 
     if (!staffRows?.length) return
 
-    // Use first PBC name for display, list all if multiple
     const names = staffRows.map(s => s.pbcs?.name).filter(Boolean)
-    setPbcName(names.length > 1 ? names[0] + ' +' + (names.length - 1) : names[0] || '')
+    if (isSuperuser) {
+      setPbcName('All WA Country')
+    } else {
+      setPbcName(names.length > 1 ? names[0] + ' +' + (names.length - 1) : names[0] || '')
+    }
 
     const bounds = new maplibregl.LngLatBounds()
     let hasGeom = false
@@ -121,7 +122,7 @@ export function MapScreen() {
       paint: { 'line-color': '#d97706', 'line-width': 2, 'line-dasharray': [2, 2] }
     })
 
-    if (hasGeom && !bounds.isEmpty()) {
+    if (hasGeom && !bounds.isEmpty() && !isSuperuser) {
       map.current.fitBounds(bounds, { padding: 40 })
     }
   }
@@ -131,6 +132,7 @@ export function MapScreen() {
       .from('notices')
       .select('*')
       .eq('status', 'active')
+      .limit(10000)
 
     if (!notices?.length) return
     setNoticeCount(notices.length)
@@ -195,28 +197,19 @@ export function MapScreen() {
 
     map.current.on('click', 'notices-fill', (e) => {
       const p = e.features[0].properties
-      const stage = (p.workflow_stage || '').replace('_', ' ').toUpperCase()
+      const stage = (p.workflow_stage || '').replace(/_/g, ' ').toUpperCase()
       const deadline = p.deadline_date ? 'Deadline ' + p.deadline_date : ''
       const notified = p.notification_date ? 'Notified ' + p.notification_date : ''
 
       new maplibregl.Popup({ maxWidth: '280px' })
         .setLngLat(e.lngLat)
         .setHTML(`
-          <div style="
-            font-family: 'DM Mono', monospace;
-            font-size: 12px;
-            color: #1a1a1a;
-            background: #ffffff;
-            padding: 2px;
-            line-height: 1.5;
-          ">
-            <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px; color: #111;">
-              ${p.tenement_type || 'Notice'} ${p.tenement_number || ''}
-            </div>
-            <div style="color: #444; margin-bottom: 2px;">${p.grantee}</div>
-            ${stage ? `<div style="color: #d97706; font-size: 11px; margin-bottom: 2px;">${stage}</div>` : ''}
-            ${notified ? `<div style="color: #555; font-size: 11px;">${notified}</div>` : ''}
-            ${deadline ? `<div style="color: #ef4444; font-size: 11px; font-weight: 600;">${deadline}</div>` : ''}
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:#111;line-height:1.6;padding:2px;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${p.tenement_type || 'Notice'} ${p.tenement_number || ''}</div>
+            <div style="color:#444;margin-bottom:2px;">${p.grantee}</div>
+            ${stage ? `<div style="color:#d97706;font-size:11px;margin-bottom:2px;">${stage}</div>` : ''}
+            ${notified ? `<div style="color:#555;font-size:11px;">${notified}</div>` : ''}
+            ${deadline ? `<div style="color:#ef4444;font-size:11px;font-weight:600;">${deadline}</div>` : ''}
           </div>
         `)
         .addTo(map.current)
@@ -277,17 +270,10 @@ export function MapScreen() {
       new maplibregl.Popup({ maxWidth: '240px' })
         .setLngLat(e.lngLat)
         .setHTML(`
-          <div style="
-            font-family: 'DM Mono', monospace;
-            font-size: 12px;
-            color: #1a1a1a;
-            background: #ffffff;
-            padding: 2px;
-            line-height: 1.5;
-          ">
-            <div style="font-weight: 700; font-size: 13px; color: #111; margin-bottom: 4px;">${p.name}</div>
-            <div style="color: #555;">${p.determination_id}</div>
-            <div style="color: #888; font-size: 11px;">${p.entity_type}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:#111;line-height:1.6;padding:2px;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${p.name}</div>
+            <div style="color:#555;">${p.determination_id}</div>
+            <div style="color:#888;font-size:11px;">${p.entity_type}</div>
           </div>
         `)
         .addTo(map.current)
@@ -313,7 +299,7 @@ export function MapScreen() {
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Compact header — just one line */}
+      {/* Compact single-line header */}
       <div style={{
         padding: '6px 16px',
         borderBottom: '1px solid var(--bg-border)',
@@ -321,31 +307,32 @@ export function MapScreen() {
         alignItems: 'center',
         justifyContent: 'space-between',
         flexShrink: 0,
+        background: 'var(--bg-base)',
       }}>
         <div style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--text-primary)',
+          fontSize: '13px',
+          color: '#ffffff',
           fontWeight: 600,
           letterSpacing: '0.04em',
         }}>
           {pbcName || 'Country Map'}
-          <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
+          <span style={{ color: '#a0a0a0', fontWeight: 400, marginLeft: 8 }}>
             {noticeCount} active notice{noticeCount !== 1 ? 's' : ''}
           </span>
         </div>
         {loading && (
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--accent)'
+            fontSize: '11px',
+            color: '#d97706',
           }}>
             Loading...
           </div>
         )}
       </div>
 
-      {/* Map fills all remaining space */}
+      {/* Map fills all remaining space above nav */}
       <div ref={mapContainer} style={{ flex: 1, paddingBottom: 'var(--nav-height)' }} />
 
       {/* Legend */}
@@ -363,7 +350,7 @@ export function MapScreen() {
           <div key={item.label} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             marginBottom: 4, fontSize: 11,
-            color: 'var(--text-secondary)',
+            color: '#ffffff',
             fontFamily: 'var(--font-mono)'
           }}>
             <div style={{
