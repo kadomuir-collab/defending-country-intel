@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 
 export function MapScreen() {
   const mapContainer = useRef(null)
