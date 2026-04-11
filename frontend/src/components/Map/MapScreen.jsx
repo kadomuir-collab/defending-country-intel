@@ -53,6 +53,20 @@ export function MapScreen() {
         ], { padding: 40 })
       }
 
+      // Check if we were navigated here from a notice detail panel
+      const focusGeometry = sessionStorage.getItem('map_focus_geometry')
+      const focusId = sessionStorage.getItem('map_focus_id')
+      if (focusGeometry && focusId) {
+        sessionStorage.removeItem('map_focus_geometry')
+        sessionStorage.removeItem('map_focus_id')
+        try {
+          const geom = JSON.parse(focusGeometry)
+          zoomToGeometry(geom, focusId)
+        } catch (e) {
+          console.error('Failed to parse focus geometry', e)
+        }
+      }
+
       setLoading(false)
     })
 
@@ -63,6 +77,42 @@ export function MapScreen() {
       }
     }
   }, [])
+
+  function zoomToGeometry(geometry, noticeId) {
+    // Compute bounds from the geometry
+    const bounds = new maplibregl.LngLatBounds()
+    const coords = geometry.type === 'Polygon'
+      ? geometry.coordinates[0]
+      : geometry.coordinates.flat(2)
+
+    coords.forEach(c => bounds.extend(c))
+
+    if (!bounds.isEmpty()) {
+      map.current.fitBounds(bounds, { padding: 60, maxZoom: 13 })
+    }
+
+    // Add a highlight layer for the focused tenement
+    if (map.current.getSource('focus-notice')) {
+      map.current.getSource('focus-notice').setData({
+        type: 'Feature', geometry, properties: {}
+      })
+    } else {
+      map.current.addSource('focus-notice', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry, properties: {} }
+      })
+      map.current.addLayer({
+        id: 'focus-notice-line',
+        type: 'line',
+        source: 'focus-notice',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 3,
+          'line-dasharray': [2, 1]
+        }
+      })
+    }
+  }
 
   async function loadPBCBoundaries(isSuperuser) {
     const { data: user } = await supabase.auth.getUser()

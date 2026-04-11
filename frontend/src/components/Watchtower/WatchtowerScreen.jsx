@@ -1,12 +1,20 @@
 // components/Watchtower/WatchtowerScreen.jsx
 import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { useNotices } from '../../hooks/useNotices'
 import { NoticeCard } from './NoticeCard'
 import { DeadlineSummary } from './DeadlineSummary'
+import { NoticeDetailPanel } from './NoticeDetailPanel'
 
 export function WatchtowerScreen() {
+  const { noticeId } = useParams()
   const [filter, setFilter] = useState('active')
   const { notices, loading, error } = useNotices(filter)
+
+  // If we have a noticeId in the URL, show the detail panel
+  if (noticeId) {
+    return <NoticeDetailPanel />
+  }
 
   const urgentCount = notices.filter(n =>
     ['red', 'critical'].includes(n.deadline_status)

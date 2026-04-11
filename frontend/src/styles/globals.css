@@ -29,10 +29,10 @@
   --risk-low:       #22c55e;
   --risk-unknown:   #8b5cf6;   /* Unknown ≠ safe */
 
-  /* Text */
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
+  /* Text — boosted for field readability */
+  --text-primary:   #ffffff;   /* Pure white — maximum contrast */
+  --text-secondary: #c0cad8;   /* Brighter than before — readable on dark */
+  --text-muted:     #7a8a9a;   /* Still muted but legible */
   --text-inverse:   #0a0c0e;
 
   /* Accent — Country / earth */
@@ -132,6 +132,7 @@ body {
 .status-badge--red      { background: rgba(239,68,68,0.15);  color: var(--status-red); }
 .status-badge--critical { background: rgba(255,23,68,0.2);   color: var(--status-critical); }
 .status-badge--grey     { background: rgba(107,114,128,0.15);color: var(--status-grey); }
+.status-badge--expired  { background: rgba(107,114,128,0.15);color: var(--status-grey); }
 .status-badge--unknown  { background: rgba(139,92,246,0.15); color: var(--status-unknown); }
 
 /* ── Risk badge ────────────────────────────────────────────── */
@@ -212,7 +213,7 @@ body {
 
 /* ── Screen header ───────────────────────────────────────────── */
 .screen-header {
-  padding: var(--space-5) var(--space-4) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--bg-border);
   position: sticky;
   top: 0;
@@ -223,7 +224,7 @@ body {
 .screen-header__title {
   font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .screen-header__subtitle {
@@ -262,6 +263,29 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* ── Detail panel ─────────────────────────────────────────────── */
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.detail-row__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.detail-row__value {
+  font-size: var(--text-sm);
+  color: #ffffff;
+  font-weight: 500;
 }
 
 /* Nyimu custom cursor */
