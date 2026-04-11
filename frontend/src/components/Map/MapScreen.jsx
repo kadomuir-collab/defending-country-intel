@@ -34,21 +34,27 @@ export function MapScreen() {
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right')
 
     map.current.on('load', async () => {
-      await loadPBCBoundaries()
-      await loadNotices()
+  const { data: user } = await supabase.auth.getUser()
+  const { data: staffData } = await supabase
+    .from('staff')
+    .select('role')
+    .eq('user_id', user.user.id)
 
-      const { data: user } = await supabase.auth.getUser()
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('role')
-        .eq('user_id', user.user.id)
+  const isSuperuser = staffData?.some(s => s.role === 'superuser')
 
-      const isSuperuser = staffData?.some(s => s.role === 'superuser')
-      if (isSuperuser) {
-        await loadAllWAPBCs()
-      }
+  await loadPBCBoundaries(!isSuperuser) // only fitBounds if NOT superuser
+  await loadNotices()
 
-      setLoading(false)
+  if (isSuperuser) {
+    await loadAllWAPBCs()
+    // Fit to all of WA
+    map.current.fitBounds([
+      [112.9, -35.2], // SW corner WA
+      [129.0, -13.7]  // NE corner WA
+    ], { padding: 40 })
+    }
+
+    setLoading(false)
     })
 
     return () => {
